@@ -183,16 +183,16 @@ if st.session_state.mostrar_formulario:
 elif st.session_state.resultados:
     # Mostrar título
     st.header(st.session_state.resultados["texto_final"])
-    st.markdown(f"**URL:** {st.session_state.resultados['texto_final']}")
+    #st.markdown(f"**URL:** {st.session_state.resultados['texto_final']}")
 
     # Mostrar contenido
-    st.subheader("Contenido del artículo")
-    st.text_area(
-        "",
-        st.session_state.resultados["contenido"],
-        height=400,
-        label_visibility="collapsed"
-    )
+    #st.subheader("Contenido del artículo")
+    #st.text_area(
+        #"",
+        #st.session_state.resultados["contenido"],
+        #height=400,
+        #label_visibility="collapsed"
+    #)
 
     # Botones
     col1, col2 = st.columns([1, 1])
