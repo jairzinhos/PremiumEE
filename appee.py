@@ -10,7 +10,6 @@ Original file is located at
 import streamlit as st
 
 import csv
-from google.colab import files
 import telepot
 import requests
 import json
