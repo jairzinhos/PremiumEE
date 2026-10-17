@@ -201,7 +201,7 @@ elif st.session_state.resultados:
         # Botón de descarga
         st.download_button(
             label="Descargar artículo",
-            data=f"{st.session_state.resultados['texto_final']}\n\n{st.session_state.resultados['texto_final']}",
+            data=f"{st.session_state.resultados['texto_final']}",
             file_name=f"articulo_{st.session_state.resultados['texto_final'][:20].replace(' ', '_')}.txt",
             mime="text/plain"
         )
