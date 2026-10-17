@@ -182,7 +182,7 @@ if st.session_state.mostrar_formulario:
 # Mostrar resultados si existen
 elif st.session_state.resultados:
     # Mostrar título
-    st.header(st.session_state.resultados["titulo"])
+    st.header(st.session_state.resultados["texto_final"])
     st.markdown(f"**URL:** {st.session_state.resultados['url']}")
 
     # Mostrar contenido
