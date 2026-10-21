@@ -7,6 +7,7 @@ import re
 from bs4 import BeautifulSoup
 import time
 from datetime import datetime
+import streamlit.components.v1 as components  # Requerido para el botón de copiado rápido inteligente
 
 def extraer_articulo(url):
     try:
@@ -18,9 +19,13 @@ def extraer_articulo(url):
         coverpage = r1.content
         soup1 = BeautifulSoup(coverpage, 'html5lib')
         
-        # URL original
+        # URL original del artículo
         canonical_tag = soup1.find('link', rel='canonical')
         url_articulo = canonical_tag['href'] if canonical_tag else url
+        
+        # Extracción del Título Principal (H1)
+        titulo_tag = soup1.find('h1') or soup1.find('div', class_='ArticleHeader-Title')
+        titulo = titulo_tag.get_text(strip=True) if titulo_tag else "Título no encontrado"
         
         # Fecha de publicación
         fecha_tag = soup1.find('div', class_='Article-Date') or soup1.find('span', class_='ee-article-date')
@@ -80,26 +85,39 @@ def extraer_articulo(url):
         else:
             texto_final = texto_cuerpo if texto_cuerpo else subtitulo_general
 
+        # ESTRUCTURACIÓN DEL CONTENIDO COMPLETO CON METADATOS INTEGRADOS PARA EL COPIADO
+        contenido_completo_con_metadatos = (
+            f"TÍTULO: {titulo}\n"
+            f"URL ORIGEN: {url_articulo}\n"
+            f"FECHA: {fecha}\n"
+            f"AUTOR: {autor}\n"
+            f"SECCIÓN: {recorrido}\n"
+            f"--------------------------------------------------\n\n"
+            f"{texto_final}"
+        )
+
         # Envío opcional a Telegram
         token = '5541258900:AAE0PhrKqTjHMWk3-ZdePgzrgRJiB3hv5CI'
         receiver_id = 582395721
         try:
             bot = telepot.Bot(token)
-            if len(texto_final) > 4096:
-                for x in range(0, len(texto_final), 4096):
-                    bot.sendMessage(receiver_id, texto_final[x:x+4096])
+            if len(contenido_completo_con_metadatos) > 4096:
+                for x in range(0, len(contenido_completo_con_metadatos), 4096):
+                    bot.sendMessage(receiver_id, contenido_completo_con_metadatos[x:x+4096])
             else:
-                bot.sendMessage(receiver_id, texto_final)
+                bot.sendMessage(receiver_id, contenido_completo_con_metadatos)
         except Exception:
-            pass # Evita que un fallo en Telegram tumbe la app
+            pass 
 
         return {
-            "texto_final": texto_final,
+            "texto_final": contenido_completo_con_metadatos,
+            "titulo": titulo,
             "subtitulo": subtitulo_general,
             "cuerpo": texto_cuerpo,
             "autor": autor,
             "fecha": fecha,
-            "recorrido": recorrido
+            "recorrido": recorrido,
+            "url": url_articulo
         }
 
     except Exception as e:
@@ -112,13 +130,11 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inicializar estado de sesión
 if 'mostrar_formulario' not in st.session_state:
     st.session_state.mostrar_formulario = True
 if 'resultados' not in st.session_state:
     st.session_state.resultados = None
 
-# Lógica de extracción (se ejecuta al dar Enter o clic)
 def procesar_extraccion():
     url = st.session_state.url_input
     if url:
@@ -136,14 +152,13 @@ def procesar_extraccion():
 def reiniciar():
     st.session_state.mostrar_formulario = True
     st.session_state.resultados = None
-    st.rerun()  # SOLUCIÓN DE ERROR LÍNEA 162: Cambiado de experimental_rerun() a rerun()
+    st.rerun()
 
 st.title("📰 Extractor de Artículos de Periódicos")
 
 if st.session_state.mostrar_formulario:
     st.markdown("Ingresa la URL del artículo que deseas extraer")
 
-    # SOLUCIÓN AL ENTER: Al asignar 'on_change', presionar Enter ejecuta directamente la función
     st.text_input(
         "URL del artículo",
         key="url_input",
@@ -157,26 +172,60 @@ if st.session_state.mostrar_formulario:
 elif st.session_state.resultados:
     res = st.session_state.resultados
     
-    # Muestra de metadatos estilizada
+    # Vista en pantalla limpia y ordenada del título y metadatos
+    st.header(res['titulo'])
+    st.caption(f"🔗 **Link original:** {res['url']}")
     st.caption(f"📌 {res['recorrido']} | ✍️ {res['autor']} | 📅 {res['fecha']}")
     
-    # SOLUCIÓN AL SUBTÍTULO GRANDE: Se presenta usando Markdown estándar en lugar de un Header masivo
     if res['subtitulo']:
         st.markdown(f"### *{res['subtitulo']}*")
     
     st.markdown("---")
-    
-    # Cuerpo del artículo impreso con formato limpio
     st.write(res['cuerpo'])
-    
     st.markdown("---")
     
-    # SOLUCIÓN AL BOTÓN DE COPIADO RÁPIDO: st.code integra un botón nativo de "Copiar al portapapeles" en la esquina superior derecha
-    st.subheader("📋 Copia rápida del artículo")
-    st.code(res['texto_final'], language="text")
+    st.subheader("📋 Acciones del Artículo")
 
-    # Acciones inferiores
-    col1, col2 = st.columns([1, 1])
+    # BOTÓN DE COPIADO INVISIBLE (HTML/JS): Copia todo el bloque con metadatos sin mostrar el cuadro plano en Streamlit
+    texto_a_copiar_json = json.dumps(res['texto_final'])
+    
+    html_boton_copiar = f"""
+    <button id="copy-btn" style="
+        background-color: #24a0ed;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        width: 100%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    ">📋 Copiar Artículo Completo (Con Metadatos)</button>
+
+    <script>
+    document.getElementById('copy-btn').addEventListener('click', function() {{
+        const textToCopy = {texto_a_copiar_json};
+        navigator.clipboard.writeText(textToCopy).then(function() {{
+            const btn = document.getElementById('copy-btn');
+            btn.style.backgroundColor = #4CAF50;
+            btn.innerText = '¡Copiado con Éxito!';
+            setTimeout(function() {{
+                btn.style.backgroundColor = '#24a0ed';
+                btn.innerText = '📋 Copiar Artículo Completo (Con Metadatos)';
+            }}, 2000);
+        }}).catch(function(err) {{
+            alert('No se pudo copiar el texto de forma automática.');
+        }});
+    }});
+    </script>
+    """
+    
+    # Renderizar el botón flotante nativo de transferencia limpia
+    components.html(html_boton_copiar, height=60)
+
+    # Bloque de controles inferiores
+    col1, col2 = st.columns(2)
 
     with col1:
         st.download_button(
@@ -189,7 +238,8 @@ elif st.session_state.resultados:
     with col2:
         st.button("🔄 Extraer otro artículo", on_click=reiniciar)
 
-# Sidebar e Información útil
+# Sidebar
 st.sidebar.header("Acerca de")
 st.sidebar.info("Herramienta optimizada de extracción universal para El Espectador.")
+
 
