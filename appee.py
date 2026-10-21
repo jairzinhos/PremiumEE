@@ -238,5 +238,7 @@ elif st.session_state.resultados:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
+    st.button("Extraer Artículo", type="primary", on_click=lambda: procesar_extraccion())
+
     # Bloque de controles inferiores estándar
 
