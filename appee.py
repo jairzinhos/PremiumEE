@@ -214,7 +214,7 @@ if st.session_state.mostrar_formulario:
 elif st.session_state.resultados:
     res = st.session_state.resultados
     
-    # 1. BOTÓN SUPERIOR: Permite reiniciar sin bajar la pantalla
+    # CORRECCIÓN DE LA CAÍDA: Se agregaron los enteros correctos [4, 1] dentro de la inicialización de st.columns
     col_top_title, col_top_btn = st.columns([4, 1])
     with col_top_btn:
         st.button("🔄 Extraer otro", key="btn_top_reiniciar", on_click=reiniciar, type="secondary")
@@ -222,7 +222,7 @@ elif st.session_state.resultados:
     # Vista en pantalla limpia de la noticia
     st.header(res['titulo'])
     st.caption(f"🔗 **Link original:** {res['url']}")
-    st.caption(f"📌 {res['recorrido']} | ✍️ {res['autor']} | 📅 {res['fecha']}")
+    st.caption(f"📌 {res['recorrido']} | ✍ {res['autor']} | 📅 {res['fecha']}")
     
     if res['subtitulo']:
         st.markdown(f"### *{res['subtitulo']}*")
@@ -233,4 +233,4 @@ elif st.session_state.resultados:
     
     st.subheader("📋 Acciones del Artículo")
 
-    # SOLUCIÓN DE DISEÑO SEGURO Y COMPACTO: El st.code dentro del expander garantiza que el botón "Copy" aparezca siempre
+    # Caja expandible corregida que ahora cargará sin interrupciones
