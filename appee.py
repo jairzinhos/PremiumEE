@@ -10,7 +10,7 @@ import streamlit as st
 
 def extraer_articulo(url):
     try:
-        # User-Agent para evitar bloqueos del servidor
+        # User-Agent para evitar bloqueos de seguridad del servidor
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
@@ -54,28 +54,41 @@ def extraer_articulo(url):
             if teaser_tag:
                 subtitulo_general = teaser_tag.get_text(strip=True)
 
-        # Extracción y limpieza del cuerpo
+        # ========================================================
+        # NUEVA EXTRACCIÓN UNIVERSAL CORREGIDA (CAPTURA TODO EL TEXTO)
+        # ========================================================
         texto_limpio_lista = []
-        template_tag = soup1.find('template', class_='ee-gated-content__more')
+        parrafos_vistos = set()  # Para prevenir que se dupliquen fragmentos de texto
+        
+        frases_a_omitir = [
+            "Para conocer más sobre", "Más contenido:", "Lea también", 
+            "En contexto", "Le puede interesar", "Publicidad", 
+            "Inicia sesión", "Suscríbete"
+        ]
 
+        # 1. Capturar párrafos que están libres fuera del paywall (Como el primer párrafo omitido)
+        contenedor_principal = soup1.find('div', class_='entry-content')
+        if contenedor_principal:
+            # Buscamos solo en primer nivel para no duplicar lo que está dentro de templates todavía
+            for elem in contenedor_principal.find_all(['p', 'h2'], recursive=False):
+                texto_elemento = elem.get_text(strip=True)
+                if texto_elemento and texto_elemento != "El Espectador" and not any(f in texto_elemento for f in frases_a_omitir):
+                    if texto_elemento not in parrafos_vistos:
+                        texto_limpio_lista.append(texto_elemento)
+                        parrafos_vistos.add(texto_elemento)
+
+        # 2. Capturar párrafos ocultos dentro de la plantilla <template>
+        template_tag = soup1.find('template', class_='ee-gated-content__more')
         if template_tag:
             html_interno = template_tag.string if template_tag.string else "".join(str(c) for c in template_tag.contents)
             inner_soup = BeautifulSoup(html_interno, 'html5lib')
 
             for elem in inner_soup.find_all(['p', 'h2']):
                 texto_elemento = elem.get_text(strip=True)
-
-                frases_a_omitir = [
-                    "Para conocer más sobre", "Más contenido:", "Lea también", 
-                    "En contexto", "Le puede interesar", "Publicidad", 
-                    "Inicia sesión", "Suscríbete"
-                ]
-
-                if texto_elemento == "El Espectador" or any(frase in texto_elemento for frase in frases_a_omitir):
-                    continue
-
-                if texto_elemento:
-                    texto_limpio_lista.append(texto_elemento)
+                if texto_elemento and texto_elemento != "El Espectador" and not any(f in texto_elemento for f in frases_a_omitir):
+                    if texto_elemento not in parrafos_vistos:
+                        texto_limpio_lista.append(texto_elemento)
+                        parrafos_vistos.add(texto_elemento)
 
         texto_cuerpo = "\n\n".join(texto_limpio_lista)
 
@@ -84,27 +97,16 @@ def extraer_articulo(url):
         else:
             texto_final = texto_cuerpo if texto_cuerpo else subtitulo_general
 
-        # ESTRUCTURACIÓN DEL CONTENIDO COMPLETO CON METADATOS INTEGRADOS PARA EL COPIADO
-        contenido_completo_con_metadatos = (
-            f"TÍTULO: {titulo}\n"
-            f"URL ORIGEN: {url_articulo}\n"
-            f"FECHA: {fecha}\n"
-            f"AUTOR: {autor}\n"
-            f"SECCIÓN: {recorrido}\n"
-            f"--------------------------------------------------\n\n"
-            f"{texto_final}"
-        )
-
         # Envío opcional a Telegram
         token = '5541258900:AAE0PhrKqTjHMWk3-ZdePgzrgRJiB3hv5CI'
         receiver_id = 582395721
         try:
             bot = telepot.Bot(token)
-            if len(contenido_completo_con_metadatos) > 4096:
-                for x in range(0, len(contenido_completo_con_metadatos), 4096):
-                    bot.sendMessage(receiver_id, contenido_completo_con_metadatos[x:x+4096])
+            if len(texto_final) > 4096:
+                for x in range(0, len(texto_final), 4096):
+                    bot.sendMessage(receiver_id, texto_final[x:x+4096])
             else:
-                bot.sendMessage(receiver_id, contenido_completo_con_metadatos)
+                bot.sendMessage(receiver_id, texto_final)
         except Exception:
             pass 
 
@@ -129,13 +131,19 @@ st.set_page_config(
     layout="wide"
 )
 
+# Inicializar estados de sesión obligatorios
 if 'mostrar_formulario' not in st.session_state:
     st.session_state.mostrar_formulario = True
 if 'resultados' not in st.session_state:
     st.session_state.resultados = None
+# NUEVO: Lista persistente para almacenar el historial de links durante la sesión
+if 'historial_links' not in st.session_state:
+    st.session_state.historial_links = []
 
-def procesar_extraccion():
-    url = st.session_state.url_input
+def procesar_extraccion(url_directa=None):
+    # Si viene del historial usa esa url, si no busca el input de pantalla
+    url = url_directa if url_directa else st.session_state.url_input
+    
     if url:
         with st.spinner("Extrayendo contenido..."):
             res = extraer_articulo(url)
@@ -143,6 +151,9 @@ def procesar_extraccion():
         if res and "error" not in res:
             st.session_state.resultados = res
             st.session_state.mostrar_formulario = False
+            # NUEVO: Guardar en el historial si no se había buscado antes en la sesión
+            if url not in st.session_state.historial_links:
+                st.session_state.historial_links.insert(0, url)  # El más nuevo al inicio
         else:
             st.error(res.get("error", "No se pudo extraer el artículo."))
     else:
@@ -153,6 +164,31 @@ def reiniciar():
     st.session_state.resultados = None
     st.rerun()
 
+# ========================================================
+# NUEVA CONFIGURACIÓN DE LA BARRA LATERAL (HISTORIAL DE CONSULTAS)
+# ========================================================
+st.sidebar.header("📜 Historial de esta Sesión")
+if st.session_state.historial_links:
+    st.sidebar.caption("Haz clic en cualquier link previo para volver a cargarlo:")
+    for link_previo in st.session_state.historial_links:
+        # Cortamos el texto largo para que no rompa la visual de la barra izquierda
+        nombre_corto = link_previo.replace("https://elespectador.com", "").split("/")[1][:30] + "..."
+        if st.sidebar.button(f"🔗 {nombre_corto}", key=f"hist_{link_previo}", help=link_previo):
+            # Cargar de inmediato al hacer clic en el historial
+            with st.spinner("Cargando desde el historial..."):
+                res = extraer_articulo(link_previo)
+                if res and "error" not in res:
+                    st.session_state.resultados = res
+                    st.session_state.mostrar_formulario = False
+                    st.rerun()
+else:
+    st.sidebar.info("Aún no has consultado artículos en esta sesión.")
+
+st.sidebar.markdown("---")
+st.sidebar.header("Acerca de")
+st.sidebar.info("Herramienta optimizada de extracción universal para El Espectador.")
+
+# Título de la App
 st.title("📰 Extractor de Artículos de Periódicos")
 
 if st.session_state.mostrar_formulario:
@@ -163,15 +199,20 @@ if st.session_state.mostrar_formulario:
         key="url_input",
         placeholder="https://elespectador.com...",
         help="Ingresa la URL completa y presiona Enter o haz clic en el botón",
-        on_change=procesar_extraccion
+        on_change=lambda: procesar_extraccion()
     )
 
-    st.button("Extraer Artículo", type="primary", on_click=procesar_extraccion)
+    st.button("Extraer Artículo", type="primary", on_click=lambda: procesar_extraccion())
 
 elif st.session_state.resultados:
     res = st.session_state.resultados
     
-    # Vista de la noticia limpia en pantalla
+    # NUEVO: Botón superior para "Extraer otro artículo" colocado antes del contenido masivo
+    col_top_title, col_top_btn = st.columns([4, 1])
+    with col_top_btn:
+        st.button("🔄 Extraer otro", key="btn_top_reiniciar", on_click=reiniciar, type="secondary")
+    
+    # Vista en pantalla limpia de la noticia
     st.header(res['titulo'])
     st.caption(f"🔗 **Link original:** {res['url']}")
     st.caption(f"📌 {res['recorrido']} | ✍️ {res['autor']} | 📅 {res['fecha']}")
@@ -185,28 +226,4 @@ elif st.session_state.resultados:
     
     st.subheader("📋 Acciones del Artículo")
 
-    # SOLUCIÓN DE DISEÑO SEGURO Y COMPACTO:
-    # Usamos un menú expandible oculto. Al abrirlo, el cuadro de código 'st.code' tiene la altura 
-    # necesaria y mostrará de inmediato el botón flotante nativo de "Copy" arriba a la derecha.
-    with st.expander("✨ Haz clic aquí para desplegar el cuadro de copiado rápido (Con metadatos)"):
-        st.code(res['texto_final'], language="text")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Bloque de controles inferiores 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.download_button(
-            label="💾 Descargar como archivo .txt",
-            data=res['texto_final'],
-            file_name=f"articulo_{datetime.now().strftime('%d_%m_%H%M')}.txt",
-            mime="text/plain"
-        )
-
-    with col2:
-        st.button("🔄 Extraer otro artículo", on_click=reiniciar)
-
-# Sidebar
-st.sidebar.header("Acerca de")
-st.sidebar.info("Herramienta optimizada de extracción universal para El Espectador.")
+    # Caja expandible con código nativo de Streamlit (Garantiza visibilidad del botón "Copy")
