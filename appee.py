@@ -238,10 +238,8 @@ elif st.session_state.resultados:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # NUEVO: Botón superior para "Extraer otro artículo" colocado antes del contenido masivo
-    col_top_title, col_top_btn = st.columns([4, 1])
-    with col_top_btn:
-        st.button("🔄 Extraer otro", key="btn_top_reiniciar", on_click=reiniciar, type="secondary")
+    # El botón inferior utiliza una clave exclusiva para no generar la falla StreamlitDuplicateElementKey
+    st.button("🔄 Extraer otro artículo", key="btn_bottom_reiniciar", on_click=reiniciar, use_container_width=True)
 
     # Bloque de controles inferiores estándar
 
