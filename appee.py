@@ -238,7 +238,10 @@ elif st.session_state.resultados:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.button("Extraer Artículo", type="primary", on_click=lambda: procesar_extraccion())
+    # NUEVO: Botón superior para "Extraer otro artículo" colocado antes del contenido masivo
+    col_top_title, col_top_btn = st.columns([4, 1])
+    with col_top_btn:
+        st.button("🔄 Extraer otro", key="btn_top_reiniciar", on_click=reiniciar, type="secondary")
 
     # Bloque de controles inferiores estándar
 
