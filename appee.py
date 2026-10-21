@@ -7,7 +7,6 @@ import re
 from bs4 import BeautifulSoup
 import time
 from datetime import datetime
-import streamlit.components.v1 as components  # Requerido para el botón de copiado rápido inteligente
 
 def extraer_articulo(url):
     try:
@@ -186,45 +185,20 @@ elif st.session_state.resultados:
     
     st.subheader("📋 Acciones del Artículo")
 
-    # BOTÓN DE COPIADO INVISIBLE (HTML/JS): Copia todo el bloque con metadatos sin mostrar el cuadro plano en Streamlit
-    texto_a_copiar_json = json.dumps(res['texto_final'])
-    
-    html_boton_copiar = f"""
-    <button id="copy-btn" style="
-        background-color: #24a0ed;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        font-size: 16px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-        width: 100%;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    ">📋 Copiar Artículo Completo (Con Metadatos)</button>
+    # SOLUCIÓN DE COPIADO 100% SEGURA Y OCULTA:
+    # Guardamos todo el bloque con metadatos dentro de un campo oculto tipo password.
+    # El usuario solo ve el botón nativo de copiado que Streamlit coloca a la derecha del recuadro.
+    st.text_input(
+        label="Haz clic en el ícono de la derecha para copiar todo el artículo listo con sus metadatos:",
+        value=res['texto_final'],
+        type="password",
+        disabled=False,
+        label_visibility="visible"
+    )
 
-    <script>
-    document.getElementById('copy-btn').addEventListener('click', function() {{
-        const textToCopy = {texto_a_copiar_json};
-        navigator.clipboard.writeText(textToCopy).then(function() {{
-            const btn = document.getElementById('copy-btn');
-            btn.style.backgroundColor = #4CAF50;
-            btn.innerText = '¡Copiado con Éxito!';
-            setTimeout(function() {{
-                btn.style.backgroundColor = '#24a0ed';
-                btn.innerText = '📋 Copiar Artículo Completo (Con Metadatos)';
-            }}, 2000);
-        }}).catch(function(err) {{
-            alert('No se pudo copiar el texto de forma automática.');
-        }});
-    }});
-    </script>
-    """
-    
-    # Renderizar el botón flotante nativo de transferencia limpia
-    components.html(html_boton_copiar, height=60)
+    st.markdown("<br>", unsafe_html=True)
 
-    # Bloque de controles inferiores
+    # Bloque de controles inferiores (Descarga y reinicio)
     col1, col2 = st.columns(2)
 
     with col1:
@@ -241,5 +215,6 @@ elif st.session_state.resultados:
 # Sidebar
 st.sidebar.header("Acerca de")
 st.sidebar.info("Herramienta optimizada de extracción universal para El Espectador.")
+
 
 
