@@ -55,10 +55,10 @@ def extraer_articulo(url):
                 subtitulo_general = teaser_tag.get_text(strip=True)
 
         # ========================================================
-        # NUEVA EXTRACCIÓN PROFUNDA Y RECURSIVA (CAPTURA DESDE EL 1ER PÁRRAFO)
+        # EXTRACCIÓN PROFUNDA Y RECURSIVA (CAPTURA DESDE EL 1ER PÁRRAFO)
         # ========================================================
         texto_limpio_lista = []
-        parrafos_vistos = set()  # Para prevenir que se dupliquen fragmentos de texto
+        parrafos_vistos = set()
         
         frases_a_omitir = [
             "Para conocer más sobre", "Más contenido:", "Lea también", 
@@ -66,13 +66,12 @@ def extraer_articulo(url):
             "Inicia sesión", "Suscríbete"
         ]
 
-        # 1. Buscar en todo el contenedor principal de forma profunda (recursive=True)
+        # 1. Buscar en todo el contenedor principal de forma profunda
         contenedor_principal = soup1.find('div', class_='entry-content')
         if contenedor_principal:
-            # Buscamos de forma recursiva para capturar párrafos ocultos en sub-contenedores o bloques de WP
             for elem in contenedor_principal.find_all(['p', 'h2'], recursive=True):
-                # IMPORTANTE: No leemos el texto que está atrapado en la plantilla oculta todavía
-                if elem.find_parent('template'):
+                # Evitar leer lo que está dentro de la plantilla del paywall en este paso
+                if elem.find_parent('template') or elem.find_parent(class_='ee-gated-content__more'):
                     continue
                     
                 texto_elemento = elem.get_text(strip=True)
@@ -101,7 +100,7 @@ def extraer_articulo(url):
         else:
             texto_final = texto_cuerpo if texto_cuerpo else subtitulo_general
 
-        # ESTRUCTURACIÓN DEL CONTENIDO COMPLETO CON METADATOS INTEGRADOS PARA EL COPIADO
+        # ESTRUCTURACIÓN DEL CONTENIDO COMPLETO CON METADATOS INTEGRADOS
         contenido_completo_con_metadatos = (
             f"TÍTULO: {titulo}\n"
             f"URL ORIGEN: {url_articulo}\n"
@@ -232,3 +231,6 @@ elif st.session_state.resultados:
     st.write(res['cuerpo'])
     st.markdown("---")
     
+    st.subheader("📋 Acciones del Artículo")
+
+    # SOLUCIÓN DE DISEÑO SEGURO Y COMPACTO: El st.code dentro del expander garantiza que el botón "Copy" aparezca siempre
