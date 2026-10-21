@@ -10,7 +10,7 @@ import streamlit as st
 
 def extraer_articulo(url):
     try:
-        # User-Agent para evitar bloqueos de seguridad del servidor
+        # User-Agent para simular navegación legítima y evitar bloqueos
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
@@ -70,7 +70,6 @@ def extraer_articulo(url):
         contenedor_principal = soup1.find('div', class_='entry-content')
         if contenedor_principal:
             for elem in contenedor_principal.find_all(['p', 'h2'], recursive=True):
-                # Evitar leer lo que está dentro de la plantilla del paywall en este paso
                 if elem.find_parent('template') or elem.find_parent(class_='ee-gated-content__more'):
                     continue
                     
@@ -111,10 +110,10 @@ def extraer_articulo(url):
             f"{texto_final}"
         )
 
-        # Envío opcional a Telegram
-        token = '5541258900:AAE0PhrKqTjHMWk3-ZdePgzrgRJiB3hv5CI'
-        receiver_id = 582395721
+        # AISLAMIENTO DE TELEGRAM: try/except total para evitar que bloquee la renderización
         try:
+            token = '5541258900:AAE0PhrKqTjHMWk3-ZdePgzrgRJiB3hv5CI'
+            receiver_id = 582395721
             bot = telepot.Bot(token)
             if len(contenido_completo_con_metadatos) > 4096:
                 for x in range(0, len(contenido_completo_con_metadatos), 4096):
@@ -136,7 +135,7 @@ def extraer_articulo(url):
         }
 
     except Exception as e:
-        return {"error": f"Error: {str(e)}"}
+        return {"error": f"Error general: {str(e)}"}
 
 # Configuración de la página
 st.set_page_config(
@@ -145,7 +144,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Inicializar estados de sesión obligatorios
+# Inicializar estados de sesión
 if 'mostrar_formulario' not in st.session_state:
     st.session_state.mostrar_formulario = True
 if 'resultados' not in st.session_state:
@@ -214,7 +213,7 @@ if st.session_state.mostrar_formulario:
 elif st.session_state.resultados:
     res = st.session_state.resultados
     
-    # SOLUCIÓN DE INDEPENDENCIA: Botón superior limpio sin columnas vacías
+    # Botón superior independiente
     st.button("🔄 Extraer otro artículo", key="btn_top_reiniciar", on_click=reiniciar, type="secondary")
     
     # Vista en pantalla limpia de la noticia
@@ -229,7 +228,8 @@ elif st.session_state.resultados:
     st.write(res['cuerpo'])
     st.markdown("---")
     
+    # ========================================================
+    # SECCIÓN INDEPENDIENTE RESGUARDADA DE ACCIONES
+    # ========================================================
     st.subheader("📋 Acciones del Artículo")
 
-    # BOTÓN DE COPIAR COMPLETO: Caja nativa independiente sin layouts que se rompan.
-    # El botón flotante de copiado oficial aparece de forma instantánea en la esquina superior derecha.
