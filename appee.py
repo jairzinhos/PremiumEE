@@ -171,7 +171,7 @@ if st.session_state.mostrar_formulario:
 elif st.session_state.resultados:
     res = st.session_state.resultados
     
-    # Vista en pantalla limpia y de lectura fluida
+    # Vista de la noticia limpia en pantalla
     st.header(res['titulo'])
     st.caption(f"🔗 **Link original:** {res['url']}")
     st.caption(f"📌 {res['recorrido']} | ✍️ {res['autor']} | 📅 {res['fecha']}")
@@ -185,20 +185,15 @@ elif st.session_state.resultados:
     
     st.subheader("📋 Acciones del Artículo")
 
-    # NUEVO CONTROL DE COPIADO COMPACTO Y 100% FUNCIONAL:
-    # Mostramos el contenido unificado con un height de solo 60px para que parezca una barra de comandos limpia.
-    # El botón flotante de copiado oficial de Streamlit aparece nativamente arriba a la derecha.
-    st.text_area(
-        label="Haz clic en el botón flotante de la esquina superior derecha del cuadro gris para copiar todo el artículo con sus metadatos integrados:",
-        value=res['texto_final'],
-        height=68,
-        disabled=False
-    )
+    # SOLUCIÓN DE DISEÑO SEGURO Y COMPACTO:
+    # Usamos un menú expandible oculto. Al abrirlo, el cuadro de código 'st.code' tiene la altura 
+    # necesaria y mostrará de inmediato el botón flotante nativo de "Copy" arriba a la derecha.
+    with st.expander("✨ Haz clic aquí para desplegar el cuadro de copiado rápido (Con metadatos)"):
+        st.code(res['texto_final'], language="text")
 
-    # CORRECCIÓN DE LA LÍNEA 199 (Uso correcto del parámetro nativo para evitar caídas en Streamlit)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Bloque de controles inferiores (Se despliegan con éxito tras reparar el break del script)
+    # Bloque de controles inferiores 
     col1, col2 = st.columns(2)
 
     with col1:
