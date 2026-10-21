@@ -55,7 +55,7 @@ def extraer_articulo(url):
                 subtitulo_general = teaser_tag.get_text(strip=True)
 
         # ========================================================
-        # EXTRACCIÓN UNIVERSAL CORREGIDA (CAPTURA TODO EL TEXTO)
+        # NUEVA EXTRACCIÓN PROFUNDA Y RECURSIVA (CAPTURA DESDE EL 1ER PÁRRAFO)
         # ========================================================
         texto_limpio_lista = []
         parrafos_vistos = set()  # Para prevenir que se dupliquen fragmentos de texto
@@ -66,23 +66,28 @@ def extraer_articulo(url):
             "Inicia sesión", "Suscríbete"
         ]
 
-        # 1. Capturar párrafos que están libres fuera del paywall (Como el primer párrafo omitido)
+        # 1. Buscar en todo el contenedor principal de forma profunda (recursive=True)
         contenedor_principal = soup1.find('div', class_='entry-content')
         if contenedor_principal:
-            for elem in contenedor_principal.find_all(['p', 'h2'], recursive=False):
+            # Buscamos de forma recursiva para capturar párrafos ocultos en sub-contenedores o bloques de WP
+            for elem in contenedor_principal.find_all(['p', 'h2'], recursive=True):
+                # IMPORTANTE: No leemos el texto que está atrapado en la plantilla oculta todavía
+                if elem.find_parent('template'):
+                    continue
+                    
                 texto_elemento = elem.get_text(strip=True)
                 if texto_elemento and texto_elemento != "El Espectador" and not any(f in texto_elemento for f in frases_a_omitir):
                     if texto_elemento not in parrafos_vistos:
                         texto_limpio_lista.append(texto_elemento)
                         parrafos_vistos.add(texto_elemento)
 
-        # 2. Capturar párrafos ocultos dentro de la plantilla <template>
+        # 2. Capturar párrafos ocultos dentro de la plantilla <template> (Paywall)
         template_tag = soup1.find('template', class_='ee-gated-content__more')
         if template_tag:
             html_interno = template_tag.string if template_tag.string else "".join(str(c) for c in template_tag.contents)
             inner_soup = BeautifulSoup(html_interno, 'html5lib')
 
-            for elem in inner_soup.find_all(['p', 'h2']):
+            for elem in inner_soup.find_all(['p', 'h2'], recursive=True):
                 texto_elemento = elem.get_text(strip=True)
                 if texto_elemento and texto_elemento != "El Espectador" and not any(f in texto_elemento for f in frases_a_omitir):
                     if texto_elemento not in parrafos_vistos:
@@ -96,7 +101,7 @@ def extraer_articulo(url):
         else:
             texto_final = texto_cuerpo if texto_cuerpo else subtitulo_general
 
-        # SOLUCIÓN DE CONTEXTO: Declaración obligatoria de la variable unificada antes del return
+        # ESTRUCTURACIÓN DEL CONTENIDO COMPLETO CON METADATOS INTEGRADOS PARA EL COPIADO
         contenido_completo_con_metadatos = (
             f"TÍTULO: {titulo}\n"
             f"URL ORIGEN: {url_articulo}\n"
@@ -176,7 +181,7 @@ st.sidebar.header("📜 Historial de esta Sesión")
 if st.session_state.historial_links:
     st.sidebar.caption("Haz clic en cualquier link previo para volver a cargarlo:")
     for link_previo in st.session_state.historial_links:
-        nombre_corto = link_previo.replace("https://elespectador.com", "").split("/")[0][:25] + "..."
+        nombre_corto = link_previo.replace("https://elespectador.com", "").split("/")[-2] if "/" in link_previo else link_previo[:25]
         if st.sidebar.button(f"🔗 {nombre_corto}", key=f"hist_{link_previo}", help=link_previo):
             with st.spinner("Cargando desde el historial..."):
                 res = extraer_articulo(link_previo)
@@ -210,7 +215,7 @@ if st.session_state.mostrar_formulario:
 elif st.session_state.resultados:
     res = st.session_state.resultados
     
-    # Botón superior para cambiar de artículo sin bajar la pantalla
+    # 1. BOTÓN SUPERIOR: Permite reiniciar sin bajar la pantalla
     col_top_title, col_top_btn = st.columns([4, 1])
     with col_top_btn:
         st.button("🔄 Extraer otro", key="btn_top_reiniciar", on_click=reiniciar, type="secondary")
@@ -227,12 +232,3 @@ elif st.session_state.resultados:
     st.write(res['cuerpo'])
     st.markdown("---")
     
-    st.subheader("📋 Acciones del Artículo")
-
-    # Caja expandible con código nativo de Streamlit para copiado veloz
-    with st.expander("✨ Haz clic aquí para desplegar el cuadro de copiado rápido (Con metadatos)"):
-        st.code(res['texto_final'], language="text")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Bloque de controles inferiores estándar
