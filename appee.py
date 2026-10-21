@@ -241,5 +241,15 @@ elif st.session_state.resultados:
     # El botón inferior utiliza una clave exclusiva para no generar la falla StreamlitDuplicateElementKey
     st.button("🔄 Extraer otro artículo", key="btn_bottom_reiniciar", on_click=reiniciar, use_container_width=True)
 
+    # Bloque de botones inferiores independientes a pantalla completa con llaves únicas para evitar duplicados
+    st.download_button(
+        label="💾 Descargar como archivo .txt",
+        data=res['texto_final'],
+        file_name=f"articulo_{datetime.now().strftime('%d_%m_%H%M')}.txt",
+        mime="text/plain",
+        key="btn_descargar_txt",
+        use_container_width=True
+    )
+
     # Bloque de controles inferiores estándar
 
