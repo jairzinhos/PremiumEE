@@ -214,15 +214,13 @@ if st.session_state.mostrar_formulario:
 elif st.session_state.resultados:
     res = st.session_state.resultados
     
-    # CORRECCIÓN DE LA CAÍDA: Se agregaron los enteros correctos [4, 1] dentro de la inicialización de st.columns
-    col_top_title, col_top_btn = st.columns([4, 1])
-    with col_top_btn:
-        st.button("🔄 Extraer otro", key="btn_top_reiniciar", on_click=reiniciar, type="secondary")
+    # SOLUCIÓN DE INDEPENDENCIA: Botón superior limpio sin columnas vacías
+    st.button("🔄 Extraer otro artículo", key="btn_top_reiniciar", on_click=reiniciar, type="secondary")
     
     # Vista en pantalla limpia de la noticia
     st.header(res['titulo'])
     st.caption(f"🔗 **Link original:** {res['url']}")
-    st.caption(f"📌 {res['recorrido']} | ✍ {res['autor']} | 📅 {res['fecha']}")
+    st.caption(f"📌 {res['recorrido']} | ✍️ {res['autor']} | 📅 {res['fecha']}")
     
     if res['subtitulo']:
         st.markdown(f"### *{res['subtitulo']}*")
@@ -233,4 +231,5 @@ elif st.session_state.resultados:
     
     st.subheader("📋 Acciones del Artículo")
 
-    # Caja expandible corregida que ahora cargará sin interrupciones
+    # BOTÓN DE COPIAR COMPLETO: Caja nativa independiente sin layouts que se rompan.
+    # El botón flotante de copiado oficial aparece de forma instantánea en la esquina superior derecha.
