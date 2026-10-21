@@ -232,4 +232,11 @@ elif st.session_state.resultados:
     # SECCIÓN INDEPENDIENTE RESGUARDADA DE ACCIONES
     # ========================================================
     st.subheader("📋 Acciones del Artículo")
+    # Caja expandible con código nativo de Streamlit para copiado veloz
+    with st.expander("✨ Haz clic aquí para desplegar el cuadro de copiado rápido (Con metadatos)"):
+        st.code(res['texto_final'], language="text")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Bloque de controles inferiores estándar
 
